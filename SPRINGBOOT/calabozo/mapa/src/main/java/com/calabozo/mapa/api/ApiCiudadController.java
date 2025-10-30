@@ -1,7 +1,11 @@
 package com.calabozo.mapa.api;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.calabozo.mapa.model.Calabozo;
 import com.calabozo.mapa.model.Ciudad;
 import com.calabozo.mapa.repository.CiudadRepository;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,54 +29,56 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+/**
+ * Controlador REST para gestionar las operaciones CRUD de Ciudades a través de
+ * una API.
+ * 
+ * @RestController - Combina @Controller y @ResponseBody, indicando que cada
+ *                 método devuelve datos para el cuerpo de la respuesta
+ * @RequestMapping - Define la ruta base "/api/ciudades" para todos los
+ *                 endpoints de este controlador
+ * 
+ *                 Este controlador proporciona una API RESTful para:
+ *                 - Consultar ciudades (GET)
+ *                 - Crear nuevas ciudades (POST)
+ *                 - Actualizar ciudades existentes (PUT)
+ *                 - Eliminar ciudades (DELETE)
+ */
 @RestController
 @RequestMapping("/api/ciudades")
 public class ApiCiudadController {
 
+    /**
+     * Inyección del repositorio de ciudades.
+     * 
+     * @Autowired - Inyecta automáticamente una instancia del repositorio
+     */
     @Autowired
     private CiudadRepository ciudadRepository;
 
-    // Punto de acceso para peticiones GET de /api/ciudad
-    // devolverá un json con todas las ciudades
+    /**
+     * Endpoint que devuelve todas las ciudades ordenadas por país y número de
+     * habitantes.
+     * 
+     * @GetMapping - Mapea las peticiones HTTP GET a este método
+     * @return List<Ciudad> - Lista de ciudades ordenada, que Spring convertirá
+     *         automáticamente a JSON
+     * 
+     *         Ejemplo de uso: GET http://localhost:8080/api/ciudades
+     * 
+     *         Conceptos clave:
+     *         - Sort: Permite especificar el orden de los resultados
+     *         - findAll(): Método de JpaRepository que recupera todas las entidades
+     */
     @GetMapping
     public List<Ciudad> getAllCiudades() {
-        // Usando el metodo FindAll sacamos todos los registros de la entidad
-        // Asociada y los devolvemos como una lista
-        // Al ser un restController se convertira a json
-        // TODO crear un endpoint especifico de ordenacion que reciba un campo y
-        // devuelva todas las ciudades
-        // Ordenadas por dicho campo
+        // Creamos un objeto Sort para ordenar por país y número de habitantes
         Sort sortPaisNumHab = Sort.by(
-                Sort.Order.asc("pais"),
-                Sort.Order.asc("numHabitantes"));
+                Sort.Order.asc("pais"), // Primer criterio: país (ascendente)
+                Sort.Order.asc("numHabitantes")); // Segundo criterio: habitantes (ascendente)
 
+        // Retornamos la lista ordenada que automáticamente se convertirá a JSON
         return ciudadRepository.findAll(sortPaisNumHab);
-    }
-
-    /*
-     * Creamos en endpoing para sacar una unica entidad
-     * A la hora de recibir parametros se pueden coger como parametros url
-     * o parametros get, es decir que vayan directamente en la url /api/ciudades/3 o
-     * que sea con el formato
-     * /api/ciudades?sexo=M&ciudad=madrid
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<Ciudad> getCiudadById(@PathVariable Long id) {
-
-        /*
-         * La función devuelve un ResponseEntity a la solicitud de la api, es una
-         * respuesta completa
-         * con multiples configuraciones
-         * primero sacamos la ciudad asociada a dicho id y si existe mapeamos la salida
-         * a una responseEntity
-         * que tiene como cuerpo los datos de la entidad ciudad del id
-         * Si no existe nos devuelve notfound, es obligatorio poner orElse ya que map
-         * devuelve
-         * un optional, es decir es posible que no exista una ciudad con dicho id
-         */
-        return ciudadRepository.findById(id).map(ciudad -> ResponseEntity.ok().body(ciudad))
-                .orElse(ResponseEntity.noContent().build());
-
     }
 
     @GetMapping("/paginado")
@@ -79,7 +86,11 @@ public class ApiCiudadController {
             @RequestParam(name = "pag", defaultValue = "0") int pag, // por defecto 0
             @RequestParam(name = "tam", defaultValue = "10") int tam // por defecto 10
     ) {
-        Pageable page = PageRequest.of(pag, tam);
+
+        // En esta variación paginamos y a la vez ordenamos
+        Sort sortPaisdesc = Sort.by("pais").descending();
+
+        Pageable page = PageRequest.of(pag, tam, sortPaisdesc);
 
         Page<Ciudad> ciudades = ciudadRepository.findAll(page);
 
@@ -120,6 +131,32 @@ public class ApiCiudadController {
 
     }
 
+    /*
+     * Creamos en endpoing para sacar una unica entidad
+     * A la hora de recibir parametros se pueden coger como parametros url
+     * o parametros get, es decir que vayan directamente en la url /api/ciudades/3 o
+     * que sea con el formato
+     * /api/ciudades?sexo=M&ciudad=madrid
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<Ciudad> getCiudadById(@PathVariable Long id) {
+
+        /*
+         * La función devuelve un ResponseEntity a la solicitud de la api, es una
+         * respuesta completa
+         * con multiples configuraciones
+         * primero sacamos la ciudad asociada a dicho id y si existe mapeamos la salida
+         * a una responseEntity
+         * que tiene como cuerpo los datos de la entidad ciudad del id
+         * Si no existe nos devuelve notfound, es obligatorio poner orElse ya que map
+         * devuelve
+         * un optional, es decir es posible que no exista una ciudad con dicho id
+         */
+        return ciudadRepository.findById(id).map(ciudad -> ResponseEntity.ok().body(ciudad))
+                .orElse(ResponseEntity.noContent().build());
+
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCity(@PathVariable Long id) {
 
@@ -131,6 +168,169 @@ public class ApiCiudadController {
 
         // Devolvemos que se ha borrado
         return ResponseEntity.ok().build();
+
+    }
+
+    /**
+     * Buscar ciudades por país o lista de países
+     * GET /api/ciudades/buscar-por-pais?pais=España
+     * GET /api/ciudades/buscar-por-pais?pais=España,Francia,Italia
+     */
+    @GetMapping("/buscar-por-pais")
+    public ResponseEntity<?> buscarCiudadesPorPais(@RequestParam String pais) {
+        try {
+            // Si contiene comas, es una lista de países
+            if (pais.contains(",")) {
+                List<String> listaPaises = List.of(pais.split(","))
+                        .stream()
+                        .map(String::trim)
+                        .collect(Collectors.toList());
+
+                List<Ciudad> ciudades = ciudadRepository.findByPaisIn(listaPaises);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("paises_buscados", listaPaises);
+                response.put("total_ciudades", ciudades.size());
+                response.put("ciudades", ciudades);
+
+                return ResponseEntity.ok(response);
+            } else {
+                // Búsqueda por un solo país
+                List<Ciudad> ciudades = ciudadRepository.findByPais(pais.trim());
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("pais", pais.trim());
+                response.put("total_ciudades", ciudades.size());
+                response.put("ciudades", ciudades);
+
+                return ResponseEntity.ok(response);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al buscar ciudades: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Buscar ciudades con patrón de país y nombre o extensión
+     * mayor/igual
+     * GET /api/ciudades/busqueda-avanzada?patron=Esp&nombre=Madrid&extension=500
+     */
+    @GetMapping("/busqueda-avanzada")
+    public ResponseEntity<?> busquedaAvanzada(
+            @RequestParam String patron,
+            @RequestParam String nombre,
+            @RequestParam int extension) {
+
+        try {
+            List<Ciudad> ciudades = ciudadRepository
+                    .findByPaisLikeAndNombreOrExtensionGreaterThanEqual(
+                            "%" + patron + "%",
+                            nombre,
+                            extension);
+
+            // También incluimos el conteo de ciudades con extensión mayor
+            int ciudadesConMayorExtension = ciudadRepository.countByExtensionGreaterThan(extension);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("criterios_busqueda", Map.of(
+                    "patron_pais", patron,
+                    "nombre_ciudad", nombre,
+                    "extension_minima", extension));
+            response.put("total_resultados", ciudades.size());
+            response.put("ciudades_con_mayor_extension", ciudadesConMayorExtension);
+            response.put("ciudades", ciudades);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error en búsqueda avanzada: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Obtener ciudades con mínimo número de calabozos
+     * GET /api/ciudades/con-calabozos?minimo=3
+     */
+    @GetMapping("/con-calabozos")
+    public ResponseEntity<?> ciudadesConCalabozos(
+            @RequestParam(defaultValue = "1") int minimo) {
+
+        try {
+            if (minimo < 0) {
+                return ResponseEntity.badRequest()
+                        .body("El número mínimo de calabozos debe ser mayor o igual a 0");
+            }
+
+            List<Ciudad> ciudades = ciudadRepository.ciudadesConMinCalabozos(minimo);
+
+            // Complementamos con la primera ciudad por nombre con mayor extensión si hay
+            // resultados
+            Ciudad ciudadMayorExtension = null;
+            if (!ciudades.isEmpty()) {
+                ciudadMayorExtension = ciudadRepository
+                        .findFirstByNombreOrderByExtensionDesc(ciudades.get(0).getNombre());
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("minimo_calabozos", minimo);
+            response.put("total_ciudades", ciudades.size());
+            response.put("ciudades", ciudades);
+
+            if (ciudadMayorExtension != null) {
+                response.put("ciudad_mayor_extension", ciudadMayorExtension);
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al buscar ciudades con calabozos: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Obtener estadísticas de ciudades agrupadas por país
+     * GET /api/ciudades/estadisticas-por-pais
+     */
+    @GetMapping("/estadisticas-por-pais")
+    public ResponseEntity<?> obtenerEstadisticasPorPais() {
+        try {
+            List<Object[]> estadisticasRaw = ciudadRepository.obtenerEstadisticasPorPais();
+
+            List<Map<String, Object>> estadisticas = estadisticasRaw.stream()
+                    .map(row -> {
+                        Map<String, Object> stat = new HashMap<>();
+                        stat.put("pais", row[0]);
+                        stat.put("total_ciudades", row[1]);
+                        stat.put("promedio_habitantes", row[2]);
+                        stat.put("extension_total", row[3]);
+                        return stat;
+                    })
+                    .collect(Collectors.toList());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("total_paises", estadisticas.size());
+            response.put("estadisticas", estadisticas);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener estadísticas: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/calabozos/{idCiudad}")
+    public List<Calabozo> getCalabozosCiudad(@PathVariable Long idCiudad) {
+
+        List<Calabozo> calabozos = new ArrayList<Calabozo>();
+        Optional<Ciudad> ciudadOp = ciudadRepository.findById(idCiudad);
+
+        if (ciudadOp.isPresent()) {
+            Ciudad ciudad = ciudadOp.get();
+            calabozos = ciudad.getCalabozos();
+        }
+
+        return calabozos;
 
     }
 

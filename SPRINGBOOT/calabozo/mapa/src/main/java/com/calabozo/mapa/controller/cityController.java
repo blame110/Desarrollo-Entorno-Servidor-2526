@@ -17,35 +17,80 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.calabozo.mapa.model.Ciudad;
 import com.calabozo.mapa.repository.CiudadRepository;
 
+/**
+ * Controlador MVC para gestionar las operaciones CRUD de Ciudades a través de
+ * vistas HTML.
+ * 
+ * @Controller - Indica que esta clase es un controlador Spring MVC
+ *             @RequestMapping("/ciudades") - Todas las rutas en este
+ *             controlador empiezan con /ciudades
+ * 
+ *             A diferencia del ApiCiudadController, este controlador:
+ *             - Devuelve vistas HTML en lugar de JSON
+ *             - Utiliza Model para pasar datos a las vistas
+ *             - Maneja formularios y redirecciones
+ */
 @Controller
 @RequestMapping("/ciudades")
 public class cityController {
 
-    // Creamos el loger
+    /**
+     * Logger para registrar eventos y errores
+     * Útil para depuración y monitoreo de la aplicación
+     */
     private Logger logger = LoggerFactory.getLogger(cityController.class);
 
+    /**
+     * Repositorio de ciudades inyectado automáticamente
+     */
     @Autowired
     private CiudadRepository ciudadRepository;
 
+    /**
+     * Maneja las peticiones GET a /ciudades
+     * Muestra la lista de todas las ciudades
+     * 
+     * @param model Objeto Model de Spring para pasar datos a la vista
+     * @return String Nombre de la vista a renderizar (listaCiudades.html)
+     * 
+     *         Conceptos clave:
+     *         - Model: Contenedor para pasar datos del controlador a la vista
+     *         - findAll(): Obtiene todos los registros de la tabla ciudades
+     */
     @GetMapping
     public String listCities(Model model) {
-
-        // Cargamos todas las ciudades de BD
+        // Recuperamos todas las ciudades de la base de datos
         List<Ciudad> listaCiudades = ciudadRepository.findAll();
 
-        // Cargamos en model los datos de la lista de ciudades para que
-        // le llegue a la pagina web destino (vista)
+        // Añadimos la lista al modelo para que esté disponible en la vista
+        // En la vista se accederá como ${ciudades}
         model.addAttribute("ciudades", listaCiudades);
 
+        // Devolvemos el nombre de la plantilla Thymeleaf
         return "listaCiudades";
-
     }
 
+    /**
+     * Maneja las peticiones GET a /ciudades/eliminar/{id}
+     * Elimina una ciudad por su ID
+     * 
+     * @param id        ID de la ciudad a eliminar
+     * @param redAttrib Objeto para añadir mensajes flash que sobreviven a una
+     *                  redirección
+     * @return String Redirección a la lista de ciudades
+     * 
+     *         Conceptos clave:
+     *         - @PathVariable: Captura variables de la URL
+     *         - RedirectAttributes: Permite pasar mensajes entre redirecciones
+     */
     @GetMapping("/eliminar/{id}")
     public String removeCity(@PathVariable Long id, RedirectAttributes redAttrib) {
-
+        // Verificamos si la ciudad existe antes de intentar eliminarla
         if (!ciudadRepository.existsById(id)) {
+            // Si no existe, añadimos un mensaje de error que se mostrará en la siguiente
+            // vista
             redAttrib.addFlashAttribute("error", "La ciudad no Existe");
+            // Registramos el error en el log
             logger.error("No existe la ciudad");
         } else {
             ciudadRepository.deleteById(id);

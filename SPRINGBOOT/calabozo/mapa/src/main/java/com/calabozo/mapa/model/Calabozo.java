@@ -1,5 +1,7 @@
 package com.calabozo.mapa.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -25,5 +27,6 @@ public class Calabozo {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_ciudad", nullable = false) // Columna de clave foránea
+    @JsonBackReference
     private Ciudad ciudad;
 }
