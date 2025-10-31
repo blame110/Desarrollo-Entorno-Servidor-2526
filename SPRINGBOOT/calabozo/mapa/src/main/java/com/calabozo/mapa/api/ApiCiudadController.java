@@ -43,6 +43,9 @@ import org.springframework.web.bind.annotation.RequestParam;
  *                 - Crear nuevas ciudades (POST)
  *                 - Actualizar ciudades existentes (PUT)
  *                 - Eliminar ciudades (DELETE)
+ * 
+ *                 Enlace uso api con postman
+ *                 https://.postman.co/workspace/My-Workspace~f9433d83-02a1-4516-8cb3-894eddd635ea/request/42012055-e386de48-c9ee-4c59-9d97-484accfdd84d?action=share&creator=42012055&ctx=documentation
  */
 @RestController
 @RequestMapping("/api/ciudades")
@@ -215,12 +218,17 @@ public class ApiCiudadController {
      * Buscar ciudades con patrón de país y nombre o extensión
      * mayor/igual
      * GET /api/ciudades/busqueda-avanzada?patron=Esp&nombre=Madrid&extension=500
+     * Si fuese por post tambien lo recogeria con @requestparam
+     * POST <form action=/api/ciudades/busqueda-avanzada method=POST>
+     * <input type=text name="nombre">
+     * <input type=text name="patron">
+     * </fomr>
      */
     @GetMapping("/busqueda-avanzada")
     public ResponseEntity<?> busquedaAvanzada(
-            @RequestParam String patron,
-            @RequestParam String nombre,
-            @RequestParam int extension) {
+            @RequestParam(defaultValue = "null") String patron,
+            @RequestParam(defaultValue = "null") String nombre,
+            @RequestParam(defaultValue = "0") int extension) {
 
         try {
             List<Ciudad> ciudades = ciudadRepository
