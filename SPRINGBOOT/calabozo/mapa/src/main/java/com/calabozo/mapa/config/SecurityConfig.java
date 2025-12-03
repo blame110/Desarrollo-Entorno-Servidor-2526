@@ -63,7 +63,8 @@ public class SecurityConfig {
                                 )
                                 // Configuración de autorización de rutas
                                 .authorizeHttpRequests(authz -> authz
-                                                .requestMatchers("/api/ciudades/**", "/", "/login", "/error",
+                                                .requestMatchers("/api/ciudades/**", "/ciudades/**", "/", "/login",
+                                                                "/error",
                                                                 "/webjars/**", "/css/**", "/js/**")
                                                 .permitAll() // Rutas públicas
                                                 .anyRequest().authenticated()) // Resto de rutas requieren autenticación
